@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-
+import authService from '@/services/auth.service';
 Vue.use(Vuex)
 
 export default new Vuex.Store({
@@ -41,30 +41,33 @@ export default new Vuex.Store({
     async login({ commit}, credentials){
       commit('SET_AUTH_STATUS','loading');
       try{
+        const response = await authService.login(credentials);        
+        // 백엔드 응답 형식에 따라 token과 user 정보를 추출하기
+        // AuthService의 임시 응답은 response.data에 user 객체와 accessToken이 포함되어있음
 
-        //api 호출은 여기에 구현하기. 
-        // 지금은 api 연동 전이니까 임시로 성공 처리 했다고 하고 추후에 백엔드에서 Httponly쿠키로 리프레시 토큰을 받고
-        // 응답으로  액세스 토큰이랑 사용자 정보를 받아와야한다고
-        // 그러니 추후에 다시 손댈 필요가 있을 듯
-        const fakeAccessToken = 'fake-jwt-access-token'+ Date.now();
-        const fakeUser = {
-          id:1,
-          username: credentials.username ||'testUser',
-          email: credentials.username? `${credentials.username}@example.com`: `testUser@example.com`, 
-        };
-
-        commit('SET_ACCESS_TOKEN', fakeAccessToken);
-        commit('SET_USER',fakeUser);
-        commit('SET_AUTHENTICATED', true);
-        commit('SET_AUTH_STATUS','success');
-        console.log('로그인 성공(임시)');                         // <- 추후에 지울 부분 
-        return Promise.resolve(fakeUser);                // 로그인 성공하면 사용자 정보 반환
+        const userWithToken = response.data;
+        
+        if(userWithToken.accessToken){
+          commit('SET_ACCESS_TOKEN', userWithToken.accessToken); // 액세스 토큰 저장
+          const user ={id: userWithToken.id , username: userWithToken.username, email: userWithToken.email};
+          commit('SET_USER', user); // 사용자 정보 저장
+          commit('SET_AUTHENTICATED', true);
+          commit('SET_AUTH_STATUS','success');
+            // 백엔드는 HttpOnly쿠키로 리프레시 토큰 설정해야함
+          return Promise.resolve(fakeUser);                // 로그인 성공하면 사용자 정보 반환
+        }
+        else{
+          //임시  AuthService가 실패한 경우(실제로는 catch로 감)
+          throw new Error(response.data.message|| '로그인 실패'); // 로그인 실패시 에러 발생
+        }
       }
       catch(error){
         commit('SETAUTH_STATUS','error');       //에러 상태
         commit('CLEAR_ACCESS_TOKEN');       
         commit('CLEAR_USER');
         commit('SET_AUTHENTICATED', false);
+
+        const errorMessage = error.response? error.response.data.message: '로그인 실패';
         console.error('로그인 실패', error);                      // <- 추후에 지울 부분
 
         //실제 에러 메세지를 반환하거나 처리할 때 여기
@@ -75,15 +78,23 @@ export default new Vuex.Store({
 
     // 로그아웃 액션
     async logout({commit}){
+      try{
+        await authService.logout(); // Authservice 호출해서 로그아웃
+        // 백엔드에 현재 리프레시 토큰을 삭제.. 무효? 하도록 요청
 
-      // 여기서 실제 api 호출하기
-      // 백엔드에 현재 리프레시 토큰을 삭제.. 무효? 하도록 요청
-
-      commit('CLEAR_ACCESS_TOKEN'); 
-      commit('CLEAR_USER');
-      commit('SET_AUTHENTICATED', false);
-      commit('SET_AUTH_STATUS','');
-      console.log('로그아웃 성공');                      // <- 추후에 지울 부분
+      }
+      catch(error){
+        console.error('로그아웃 api 호출 실패',error);
+        //로그아웃 요청 실패시에도 클라이언트 측 상태는 초기화하는 것이 일반적임
+      }
+      finally{
+        commit('CLEAR_ACCESS_TOKEN'); 
+        commit('CLEAR_USER');
+        commit('SET_AUTHENTICATED', false);
+        commit('SET_AUTH_STATUS','');
+        console.log('로그아웃 처리 완료( 클라이언트 ) ');                      // <- 추후에 지울 부분
+      }
+      
                                                         
       // 필요하면 localStorage에 저장된 관련 정보도 여기서 정리하기기    
       },

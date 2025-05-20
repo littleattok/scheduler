@@ -1,11 +1,11 @@
 import axios from 'axios';
-
+import apiClient from './api'
 // 이거는 실제 내 백엔드 주소로 변경해야함, https://localhost:8080/api/auth/ 처럼
 const API_URL = '/api/auth/';
 
 class AuthService { 
     login(userCredentials){
-        // return axios.post(API_URL + 'signin',{
+        // return apiClient.post(API_URL + 'signin',{
         //     username: userCredentials.username,
         //     password: userCredentials.password
         // });
@@ -33,7 +33,7 @@ class AuthService {
     }
     logout(){
         
-        // return axios.post(API_URL + 'signout');
+        // return apiClient.post(API_URL + 'signout');
         // 실제로는 백엔드에서 HttpOnly 리프레시 토큰을 무효화하기
         // 클라이언트에서는 Vuex 상태와 로컬 저장된 액세스 토큰 등을 정리하기기
 
