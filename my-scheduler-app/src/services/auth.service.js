@@ -42,7 +42,24 @@ class AuthService {
     }
 
     // 여기에 register , refreshToken 등의 메소드를 추가할 수 있음
-    
+    refreshToken(){
+        console.log('[AuthService]리프레시 토큰 요청');
+        //retrun apiClient.post('/auth/refreshToken');
+        //실제로는 위와 같이 API를 호출함
+        //이 요청에는 HttpOnly 쿠키에 담긴 리프레시 토큰이 자동으로 전송됨
+        // 백엔드는 이 리프레시 토큰을 검증하고 새 액세스 토큰을 발급하
+        
+
+        // 임시로 응답
+        return new Promise((resolve)=>{
+            setTimeout(()=>{
+                const newFakeAccessToken = 'new-fake-jwt-access-token-'+Date.now();
+                console.log('[AuthService] 새 액세스 토큰 발급(임시)',newFakeAccessToken);
+                resolve({data: {accessToken: newFakeAccessToken}});
+            },500)
+        })
+    }
+
 
 
 }
