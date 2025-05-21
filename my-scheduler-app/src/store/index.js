@@ -3,6 +3,10 @@ import Vuex from 'vuex'
 import authService from '@/services/auth.service';
 Vue.use(Vuex)
 
+// 여러 요청이 동시에 401을 받을 때 토큰 재발급 요청을 한 번만 보내기 위한 변수
+let refreshingTokenPromise = null; 
+
+
 export default new Vuex.Store({
   state: {
     accessToken : null, 
@@ -92,13 +96,43 @@ export default new Vuex.Store({
         commit('CLEAR_USER');
         commit('SET_AUTHENTICATED', false);
         commit('SET_AUTH_STATUS','');
+        
+        refreshingTokenPromise = null; // 로그아웃 시 재발급 프로미스도 초기화
         console.log('로그아웃 처리 완료( 클라이언트 ) ');                      // <- 추후에 지울 부분
       }
       
-                                                        
       // 필요하면 localStorage에 저장된 관련 정보도 여기서 정리하기기    
       },
-        // TODO: 추후에 refeshToken이나 FetchUser 등 액션도 추가할 예정
+
+
+      async refreshToken({commit,state}){
+        commit ('SET_AUTH_STATUS','refreshing');
+        try{
+
+          //AuthService에 refreshToken 메소트 호출( 백엔드 api 연동 필요)
+          // 이 요청 시 브라우저는 HttpOnly 쿠키에 담긴 리프레시 토큰을 자동으로 전송
+          const response = await authService.refreshToken(state.accessToken);
+          const newAccessToken = response.data.accessToken;
+
+          commit('SET_ACCESS_TOKEN', newAccessToken); // 새로운 액세스 토큰 저장
+          commit('SET_AUTH_STATUS','success');
+          commit('SET_AUTHENTICATED', true);
+          return newAccessToken; // 새로운 액세스 토큰 반환
+        }
+        catch{
+          console.error('리프레시 토큰 요청 실패', error);
+          commit('SET_AUTH_STATUS','error');
+          commit('CLEAR_ACCESS_TOKEN'); // 액세스 토큰 비우기
+          commit('CLEAR_USER'); // 사용자 정보 비우기
+          commit('SET_AUTHENTICATED', false); // 인증 상태 false로 설정
+          refreshingTokenPromise =null;
+          return Promise.reject(error);
+        }
+      }
+
+
+      // TODO: 추후에 refeshToken이나 FetchUser 등 액션도 추가할 예정
+
     },
 
 

@@ -42,7 +42,7 @@ class AuthService {
     }
 
     // 여기에 register , refreshToken 등의 메소드를 추가할 수 있음
-
+    
 
 
 }
